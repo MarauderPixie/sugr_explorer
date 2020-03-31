@@ -1,49 +1,62 @@
 library(jsonlite)
 library(lubridate)
+# better be explicit than:
 # pluck <- purrr::partial(pluck, .default = NA)
 
-cgm_json <- read_json("data_raw/2020_02.json")
+cgm_json <- read_json("data_raw/2020_03.json")
 
-# [-c(1, 2)] bc 1st & 2nd entry is device information & settings
-fin <- map_df(seq_along(cgm_json[-c(1, 2)]), function(i){
-  tibble(
-    i        = i,
-    # look into timezoneOffset!!
-    datetime = pluck(cgm_json, i, "time", .default = NA), # %>% lubridate::as_datetime(),
-    event    = pluck(cgm_json, i, "type", .default = NA),
-    # units    = pluck(cgm_json, i, "units"),
-    normal   = pluck(cgm_json, i, "normal", .default = NA),
-    value    = pluck(cgm_json, i, "value", .default = NA),
-    bg_input = pluck(cgm_json, i, "bgInput", .default = NA),
-    wiz_carb = pluck(cgm_json, i, "recommended", 1, .default = NA),
-    wiz_corr = pluck(cgm_json, i, "recommended", 2, .default = NA),
-    wiz_net  = pluck(cgm_json, i, "recommended", 3, .default = NA),
-    tmp_type = pluck(cgm_json, i, "deliveryType", .default = NA),
-    tmp_dur  = pluck(cgm_json, i, "duration", .default = NA),
-    tmp_rate = pluck(cgm_json, i, "rate", .default = NA),
-    tmp_perc = pluck(cgm_json, i, "percent", .default = NA),
-    tmp_status = pluck(cgm_json, i, "status", .default = NA)
-  )
-}) %>%
-  mutate(
-    datetime = as_datetime(datetime),
-    date = as_date(datetime),
-    time = paste0(hour(datetime), ":", minute(datetime)) %>% hm(),
-    weekday = wday(datetime, label = TRUE, week_start = 1, abbr = F),
-    value = value / .0555
-  )
+bolus   <- cgm_json[["data"]][["current"]][["data"]][["bolus"]]
+cont_gm <- cgm_json[["data"]][["current"]][["data"]][["cbg"]]
+self_gm <- cgm_json[["data"]][["current"]][["data"]][["smbg"]]
+wizard  <- cgm_json[["data"]][["current"]][["data"]][["wizard"]]
 
-cgm   <- filter(fin, event == "cbg")
-bolus <- filter(fin, event == "bolus")
-basal <- filter(fin, event == "basal")
+tidy_bolus <- map_df(seq_along(bolus), function(i){
+    tibble(
+        datetime = pluck(bolus, i, "_deviceTime", .default = NA),
+        type     = pluck(bolus, i, "type", .default = NA),
+        subtype  = pluck(bolus, i, "subType", .default = NA),
+        normal   = pluck(bolus, i, "normal", .default = NA),
+    )
+}) %>% 
+    mutate(
+        datetime = as_datetime(datetime)
+    )
 
-saveRDS(cgm, "data_done/cgm.rds")
-saveRDS(bolus, "data_done/bolus.rds")
-saveRDS(basal, "data_done/basal.rds")
+tidy_cgm <- map_df(seq_along(cont_gm), function(i){
+    tibble(
+        datetime = pluck(cont_gm, i, "_deviceTime", .default = NA),
+        type     = pluck(cont_gm, i, "type", .default = NA),
+        glucose  = pluck(cont_gm, i, "value", .default = NA),
+        units    = pluck(cont_gm, i, "units", .default = NA)
+    )
+}) %>% 
+    mutate(
+        datetime = as_datetime(datetime)
+    )
 
-rm(cgm_json, fin, cgm, bolus, basal)
+tidy_sgm <- map_df(seq_along(self_gm), function(i){
+    tibble(
+        datetime = pluck(self_gm, i, "_deviceTime", .default = NA),
+        type     = pluck(self_gm, i, "type", .default = NA),
+        glucose  = pluck(self_gm, i, "value", .default = NA),
+        units    = pluck(self_gm, i, "units", .default = NA)
+    )
+}) %>% 
+    mutate(
+        datetime = as_datetime(datetime)
+    )
 
-## DIAGNOSTICS!
-diag %>%
-  filter(event_type == "bolus") %>%
-  sample_n(5)
+tidy_wiz <- map_df(seq_along(wizard), function(i){
+    tibble(
+        datetime = pluck(wizard, i, "_deviceTime", .default = NA),
+        type     = pluck(wizard, i, "type", .default = NA),
+        carbs    = pluck(wizard, i, "carbInput", .default = NA),
+        carbs_ratio = pluck(wizard, i, "insulinCarbRatio", .default = NA),
+        carbs_lingering = pluck(wizard, i, "insulinOnBoard", .default = NA),
+        insulin_actual  = pluck(wizard, i, "bolus", "normal", .default = NA),
+    )
+}) %>% 
+    mutate(
+        datetime = as_datetime(datetime),
+        insulin_recomm = carbs * carbs_ratio
+    )

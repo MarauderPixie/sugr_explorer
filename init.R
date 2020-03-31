@@ -1,4 +1,5 @@
 library(tidyverse)
+library(lubridate)
 
 theme_set(hrbrthemes::theme_ipsum_rc())
 
@@ -9,4 +10,3 @@ geom_histogram  <- purrr::partial(geom_histogram, color = "white", bins = 21)
 scale_colorfill <- purrr::partial(scale_color_brewer,
                                   palette = "Dark2",
                                   aesthetics = c("color", "fill"))
-s
