@@ -60,3 +60,5 @@ tidy_wiz <- map_df(seq_along(wizard), function(i){
         datetime = as_datetime(datetime),
         insulin_recomm = carbs * carbs_ratio
     )
+
+rm(bolus, cgm_json, cont_gm, self_gm, wizard)

@@ -2,6 +2,7 @@ library(tidyverse)
 library(lubridate)
 
 theme_set(hrbrthemes::theme_ipsum_rc())
+# theme_set(hrbrthemes::theme_modern_rc())
 
 geom_col   <- purrr::partial(geom_col, color = "white")
 geom_bar   <- purrr::partial(geom_bar, color = "white")
