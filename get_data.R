@@ -12,7 +12,7 @@ library(curlconverter)
 GET("https://api.tidepool.org/data/57417f8989")
 
 POST("https://api.tidepool.org/auth/login", 
-     config = list(authenticate("tobias.anton.85@gmail.com", 
-                                "vS8tgd4WFF4JT7*V@D@dH3R6^dmDy&V#NpU2kBxAWt")
+     config = list(authenticate("", 
+                                "")
                    )
      )
