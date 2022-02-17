@@ -17,22 +17,25 @@ theme_set(hrbrthemes::theme_ft_rc(plot_margin = margin(10, 10, 10, 10)))
 
 # dt <- readRDS("data_done/basal.rds")
 # dt <- readRDS("data_done/bolus.rds")
-dt <- readRDS("data_done/cgm.rds") %>% 
-   select(-starts_with("tmp_"),
-          -starts_with("wiz_"),
-          -bg_input, -normal) %>% 
-   mutate(
-      level_range = case_when(
-         value > 250 ~ 6,
-         between(value, 181, 250) ~ 5,
-         between(value, 131, 180) ~ 4,
-         between(value, 81, 130) ~ 3,
-         between(value, 61, 80) ~ 2,
-         value < 60 ~ 1
-      ) %>% factor(labels = c("too low! (<60)", "low (61-80)",
-                              "ideal (81-130)", "above ideal (131-180)",
-                              "high (181-250)", "too high! (>250)"), ordered = TRUE)
-   )
+# dt <- readRDS("data_tidepool_done/cgm.rds") %>% 
+#    select(-starts_with("tmp_"),
+#           -starts_with("wiz_"),
+#           -bg_input, -normal) %>% 
+#    mutate(
+#       level_range = case_when(
+#          value > 250 ~ 6,
+#          between(value, 181, 250) ~ 5,
+#          between(value, 131, 180) ~ 4,
+#          between(value, 81, 130) ~ 3,
+#          between(value, 61, 80) ~ 2,
+#          value < 60 ~ 1
+#       ) %>% factor(labels = c("too low! (<60)", "low (61-80)",
+#                               "ideal (81-130)", "above ideal (131-180)",
+#                               "high (181-250)", "too high! (>250)"), ordered = TRUE)
+#    )
+
+dt <- readRDS("data_carelink_done/cgm.rds") %>% 
+    rename(value = "sensor_glucose")
 
 day_labels <- levels(dt$weekday)
 

@@ -10,7 +10,7 @@ data_full <- read_delim("data_carelink_raw/carelink-export-220217.csv",
         index = Index,
         date  = Date,
         weekday = wday(date, label = TRUE, week_start = 1),
-        time  = Time,
+        time  = Time, # round_date(Time, unit = "minute"),
         # alarm = Alarm,
         bg_reading = `BG Reading (mg/dL)`,
         basal_rate = `Basal Rate (U/h)`,
@@ -42,3 +42,5 @@ bolus <- data_full %>%
            wiz_ratio, wiz_carbs, wiz_correction) %>% 
     filter(if_any(c(bolus_vol_delivered, wiz_ratio), ~ !is.na(.)))
 
+saveRDS(bolus, "data_carelink_done/bolus.rds")
+saveRDS(cgm, "data_carelink_done/cgm.rds")
