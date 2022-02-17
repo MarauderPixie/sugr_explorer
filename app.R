@@ -22,7 +22,6 @@ dt <- readRDS("data_done/cgm.rds") %>%
           -starts_with("wiz_"),
           -bg_input, -normal) %>% 
    mutate(
-      weekday = wday(date, label = TRUE, week_start = 1),
       level_range = case_when(
          value > 250 ~ 6,
          between(value, 181, 250) ~ 5,
