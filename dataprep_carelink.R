@@ -1,6 +1,6 @@
 library(lubridate)
 
-data_full <- read_delim("data_carelink_raw/carelink-export-220217.csv", 
+data_full <- read_delim("data_carelink_raw/carelink-export-23-01-17.csv", 
                   delim = ";", escape_double = FALSE, 
                   col_types = cols(Date = col_date(format = "%Y/%m/%d"), 
                                    Time = col_time(format = "%H:%M:%S")), 
@@ -44,3 +44,23 @@ bolus <- data_full %>%
 
 saveRDS(bolus, "data_carelink_done/bolus.rds")
 saveRDS(cgm, "data_carelink_done/cgm.rds")
+
+
+
+### tsibblerize all
+wip <- cgm %>% 
+    mutate(
+        datetime = round_date(ymd_hms(paste(date, time)), 
+                              unit = "minute")
+    ) %>% 
+    distinct(datetime, .keep_all = TRUE) %>% 
+    as_tsibble(index = datetime, 
+               # key = weekday, 
+               regular = FALSE)
+
+wip %>% 
+    ACF(sensor_glucose, lag_max = 100) %>% 
+    autoplot()
+
+wip %>% 
+    model(STL(sensor_glucose ~ season(datetime)))

@@ -1,13 +1,22 @@
 library(tidyverse)
 library(lubridate)
+library(tsibble)
+library(feasts)
 
 theme_set(hrbrthemes::theme_ipsum_rc())
 # theme_set(hrbrthemes::theme_modern_rc())
 
-geom_col   <- purrr::partial(geom_col, color = "white")
-geom_bar   <- purrr::partial(geom_bar, color = "white")
-# geom_point <- purrr::partial(geom_point, alpha = .5)
-geom_histogram  <- purrr::partial(geom_histogram, color = "white", bins = 21)
-scale_colorfill <- purrr::partial(scale_color_brewer,
-                                  palette = "Dark2",
-                                  aesthetics = c("color", "fill"))
+update_geom_defaults("point", list(colour = "#3c4c72"))
+update_geom_defaults("line", list(colour = "#3c4c72"))
+update_geom_defaults("area", list(colour = "#f0f0f0", 
+                                  fill   = "#3c4c72"))
+update_geom_defaults("rect", list(colour = "#f0f0f0", 
+                                  fill   = "#3c4c72"))
+update_geom_defaults("density", list(colour = "#f0f0f0", 
+                                     fill   = "#3c4c72"))
+update_geom_defaults("bar", list(colour = "white", 
+                                 fill   = "#3c4c72"))
+update_geom_defaults("col", list(colour = "#f0f0f0", 
+                                 fill   = "#3c4c72"))
+update_geom_defaults("text", list(colour = "#3c4c72"))
+

@@ -23,19 +23,18 @@ theme_set(hrbrthemes::theme_ft_rc(plot_margin = margin(10, 10, 10, 10)))
 #           -bg_input, -normal) %>% 
 #    mutate(
 #       level_range = case_when(
-#          value > 250 ~ 6,
-#          between(value, 181, 250) ~ 5,
-#          between(value, 131, 180) ~ 4,
-#          between(value, 81, 130) ~ 3,
-#          between(value, 61, 80) ~ 2,
-#          value < 60 ~ 1
+#          sensor_glucose > 250 ~ 6,
+#          between(sensor_glucose, 181, 250) ~ 5,
+#          between(sensor_glucose, 131, 180) ~ 4,
+#          between(sensor_glucose, 81, 130) ~ 3,
+#          between(sensor_glucose, 61, 80) ~ 2,
+#          sensor_glucose < 60 ~ 1
 #       ) %>% factor(labels = c("too low! (<60)", "low (61-80)",
 #                               "ideal (81-130)", "above ideal (131-180)",
 #                               "high (181-250)", "too high! (>250)"), ordered = TRUE)
 #    )
 
-dt <- readRDS("data_carelink_done/cgm.rds") %>% 
-    rename(value = "sensor_glucose")
+dt <- readRDS("data_carelink_done/cgm.rds")
 
 day_labels <- levels(dt$weekday)
 
@@ -103,12 +102,12 @@ server <- function(input, output) {
    #    dtf <- dt %>% 
    #       group_by(date, hour(datetime)) %>% 
    #       filter(datetime > deadline,
-   #              between(value, 
-   #                      quantile(value, perc, na.rm = T),
-   #                      quantile(value, 1-perc, na.rm = T))) %>% 
+   #              between(sensor_glucose, 
+   #                      quantile(sensor_glucose, perc, na.rm = T),
+   #                      quantile(sensor_glucose, 1-perc, na.rm = T))) %>% 
    #       ungroup()
    #    
-   #    ggplot(dtf, aes(datetime, value)) +
+   #    ggplot(dtf, aes(datetime, sensor_glucose)) +
    #       geom_line(size = .2) +
    #       # geom_point(size = .1, alpha = .5) +
    #       geom_smooth() +
@@ -127,14 +126,14 @@ server <- function(input, output) {
          filter(between(date, date_from, date_to)) %>% 
          group_by(date) %>% 
          summarise(
-            min = min(value),
-            q10 = quantile(value, .10),
-            q25 = quantile(value, .25),
-            mid = median(value),
-            mean = mean(value),
-            q75 = quantile(value, .75),
-            q90 = quantile(value, .90),
-            max = max(value)
+            min = min(sensor_glucose),
+            q10 = quantile(sensor_glucose, .10),
+            q25 = quantile(sensor_glucose, .25),
+            mid = median(sensor_glucose),
+            mean = mean(sensor_glucose),
+            q75 = quantile(sensor_glucose, .75),
+            q90 = quantile(sensor_glucose, .90),
+            max = max(sensor_glucose)
          ) %>% 
          ungroup()
       
@@ -192,14 +191,14 @@ server <- function(input, output) {
                 weekday %in% daycheck) %>% 
          group_by(hour(time)) %>% 
          summarise(
-            min = min(value),
-            q10 = quantile(value, .10),
-            q25 = quantile(value, .25),
-            mid = median(value),
-            mean = mean(value),
-            q75 = quantile(value, .75),
-            q90 = quantile(value, .90),
-            max = max(value)
+            min = min(sensor_glucose),
+            q10 = quantile(sensor_glucose, .10),
+            q25 = quantile(sensor_glucose, .25),
+            mid = median(sensor_glucose),
+            mean = mean(sensor_glucose),
+            q75 = quantile(sensor_glucose, .75),
+            q90 = quantile(sensor_glucose, .90),
+            max = max(sensor_glucose)
          ) %>% 
          ungroup() %>% 
          dplyr::rename("Hour" = `hour(time)`)
@@ -208,6 +207,8 @@ server <- function(input, output) {
       p <- p + scale_y_continuous(limits = c(0, 350),
                                   breaks = c(50, 80, 130, 200, 250, 300, 350),
                                   minor_breaks = NULL)
+      p <- p + scale_x_continuous(breaks = seq(0, 23, by = 3),
+                                  minor_breaks = 0:23)
       # p <- p + geom_hline(yintercept = c(90, 150), 
       #                     lty = "dashed", color = "dark green")
       p <- p + labs(x = "Hour", y = "Glucose Level (mg/dl)")
