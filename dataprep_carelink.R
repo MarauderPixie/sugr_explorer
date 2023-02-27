@@ -1,66 +1,79 @@
 library(lubridate)
 
-data_full <- read_delim("data_carelink_raw/carelink-export-23-01-17.csv", 
-                  delim = ";", escape_double = FALSE, 
-                  col_types = cols(Date = col_date(format = "%Y/%m/%d"), 
-                                   Time = col_time(format = "%H:%M:%S")), 
-                  locale = locale(decimal_mark = ","), 
-                  trim_ws = TRUE, skip = 6) %>% 
-    transmute(
-        index = Index,
-        date  = Date,
-        weekday = wday(date, label = TRUE, week_start = 1),
-        time  = Time, # round_date(Time, unit = "minute"),
-        # alarm = Alarm,
-        bg_reading = `BG Reading (mg/dL)`,
-        basal_rate = `Basal Rate (U/h)`,
-        # calibration_bg = `Sensor Calibration BG (mg/dL)`,
-        sensor_glucose = `Sensor Glucose (mg/dL)`,
-        bolus_vol_delivered = `Bolus Volume Delivered (U)`,
-        prime_type = `Prime Type`,
-        prime_vol_delivered = `Prime Volume Delivered (U)`,
-        wiz_ratio = `BWZ Carb Ratio (g/U)`,
-        wiz_carbs = `BWZ Carb Input (grams)`, # carbs / ratio ~= delivered
-        wiz_bg_input = `BWZ BG Input (mg/dL)`,
-        wiz_correction = `BWZ Correction Estimate (U)`,
-        wiz_food = `BWZ Food Estimate (U)`,
-        wiz_unabsorbed = `BWZ Unabsorbed Insulin Total (U)`,
-        bolus_final = `Final Bolus Estimate`
-    ) %>% 
-    filter(!is.na(index))
+#############################################################
+## preparation
+prev_cgm  <- readRDS("data_carelink_done/cgm.rds")
+prev_pump <- readRDS("data_carelink_done/pump.rds")
 
-cgm <- data_full %>% 
-    select(index, date, weekday, time, sensor_glucose) %>% 
-    filter(!is.na(sensor_glucose))
+max_cgm  <- max(prev_cgm$datetime)
+max_pump <- max(prev_pump$datetime)
+
+files <- fs::dir_ls("all_csv")
+file  <- files[length(files)]
+
+#############################################################
+## read-in and cleanup
+temp <- read_delim(file, delim = ";", escape_double = FALSE, 
+                   col_types = cols(Date = col_date(format = "%Y/%m/%d"), 
+                                    Time = col_time(format = "%H:%M:%S")), 
+                   locale = locale(decimal_mark = ","), 
+                   trim_ws = TRUE, skip = 6) %>% 
+    janitor::clean_names() %>% 
+    filter(!is.na(index)) %>% 
+    transmute(
+        file               = file, 
+        index              = index,
+        datetime           = ymd_hms(paste(date, time)),
+        date               = date,
+        wday               = wday(date, label = TRUE, week_start = 1),
+        time               = time,
+        basal_rate         = basal_rate_u_h,
+        bg_direct          = bg_reading_mg_d_l,
+        bg_sensor          = sensor_glucose_mg_d_l,
+        wiz_ratio          = bwz_carb_ratio_g_u,
+        wiz_carbs          = bwz_carb_input_grams,
+        wiz_bg             = bwz_bg_input_mg_d_l,
+        wiz_est_correction = bwz_correction_estimate_u,
+        wiz_est_food       = bwz_food_estimate_u,
+        wiz_est_unabsorbed = bwz_unabsorbed_insulin_total_u,
+        bolus_final        = final_bolus_estimate, 
+        bolus_delivered    = bolus_volume_delivered_u
+    )
+
+#############################################################
+## splitting sensor and pump data
+cutoff_idx <- temp$index[min(which(!is.na(temp$bg_sensor)))]
+
+tmp_cgm <- temp %>% 
+    filter(index > cutoff_idx,
+           datetime > max_cgm) %>% 
+    select(file, index, datetime, date, wday, time, bg_sensor)
+
+tmp_pump <- temp %>% 
+    select(-bg_sensor) %>% 
+    filter(index <= cutoff_idx,
+           datetime > max_pump)
+
+merged_cgm  <- bind_rows(prev_cgm, tmp_cgm) %>% 
+    mutate(index = seq_along(file))
+merged_pump <- bind_rows(prev_pump, tmp_pump) %>% 
+    mutate(index = seq_along(file))
+
+#############################################################
+## store final data
+saveRDS(merged_cgm,  "data_carelink_done/cgm.rds")
+saveRDS(merged_pump, "data_carelink_done/pump.rds")
+
+write_csv(merged_cgm,  "data_carelink_done/cgm.csv")
+write_csv(merged_pump, "data_carelink_done/pump.csv")
+
+rm(ls())
+
 
 # basal <- data_full %>% 
 #     select(time, basal_rate) %>% 
 #     filter(!is.na(basal_rate))
-
-bolus <- data_full %>% 
-    select(index, date, weekday, time, bolus_vol_delivered, 
-           wiz_ratio, wiz_carbs, wiz_correction) %>% 
-    filter(if_any(c(bolus_vol_delivered, wiz_ratio), ~ !is.na(.)))
-
-saveRDS(bolus, "data_carelink_done/bolus.rds")
-saveRDS(cgm, "data_carelink_done/cgm.rds")
-
-
-
-### tsibblerize all
-wip <- cgm %>% 
-    mutate(
-        datetime = round_date(ymd_hms(paste(date, time)), 
-                              unit = "minute")
-    ) %>% 
-    distinct(datetime, .keep_all = TRUE) %>% 
-    as_tsibble(index = datetime, 
-               # key = weekday, 
-               regular = FALSE)
-
-wip %>% 
-    ACF(sensor_glucose, lag_max = 100) %>% 
-    autoplot()
-
-wip %>% 
-    model(STL(sensor_glucose ~ season(datetime)))
+# bolus <- data_full %>% 
+#     select(index, date, weekday, time, bolus_vol_delivered, 
+#            wiz_ratio, wiz_carbs, wiz_correction) %>% 
+#     filter(if_any(c(bolus_vol_delivered, wiz_ratio), ~ !is.na(.)))
