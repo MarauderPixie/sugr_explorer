@@ -2,3 +2,6 @@
 .Rhistory
 .RData
 .Ruserdata
+
+all_csv/*
+data_carelink_raw/*
