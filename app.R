@@ -23,20 +23,41 @@ theme_set(hrbrthemes::theme_ft_rc(plot_margin = margin(10, 10, 10, 10)))
 #           -bg_input, -normal) %>% 
 #    mutate(
 #       level_range = case_when(
-#          sensor_glucose > 250 ~ 6,
-#          between(sensor_glucose, 181, 250) ~ 5,
-#          between(sensor_glucose, 131, 180) ~ 4,
-#          between(sensor_glucose, 81, 130) ~ 3,
-#          between(sensor_glucose, 61, 80) ~ 2,
-#          sensor_glucose < 60 ~ 1
+#          bg_sensor > 250 ~ 6,
+#          between(bg_sensor, 181, 250) ~ 5,
+#          between(bg_sensor, 131, 180) ~ 4,
+#          between(bg_sensor, 81, 130) ~ 3,
+#          between(bg_sensor, 61, 80) ~ 2,
+#          bg_sensor < 60 ~ 1
 #       ) %>% factor(labels = c("too low! (<60)", "low (61-80)",
 #                               "ideal (81-130)", "above ideal (131-180)",
 #                               "high (181-250)", "too high! (>250)"), ordered = TRUE)
 #    )
 
-dt <- readRDS("data_carelink_done/cgm.rds")
+cgm <- readRDS("data_carelink_done/cgm.rds") %>% 
+    select(-date, -time, -index) %>% 
+    mutate(
+        datetime = round_date(datetime, unit = "5 mins")
+    ) %>% 
+    filter(!is.na(bg_sensor)) %>% 
+    distinct()
+pmp <- readRDS("data_carelink_done/pump.rds") %>% 
+    select(-date, -time, -index) %>% 
+    mutate(
+        datetime = round_date(datetime, unit = "5 mins")
+    ) %>% 
+    distinct()
 
-day_labels <- levels(dt$weekday)
+dt <- left_join(cgm, pmp, by = c("file", "datetime", "wday")) %>% 
+    mutate(
+        date = date(datetime),
+        time = hms::as_hms(datetime),
+        .after = datetime
+    )
+
+# dt <- readRDS("data_carelink_done/cgm.rds")
+
+day_labels <- levels(dt$wday)
 
 # Define UI for application ----
 ui <- fluidPage(
@@ -76,14 +97,22 @@ ui <- fluidPage(
          tabsetPanel(
             type = "pills",
             # plotOutput("plot_lines"),
-            tabPanel("Trend", plotOutput("plot_trend")),
-            tabPanel("Average Day", 
+            tabPanel("Summary", plotOutput("plot_trend")),
+            tabPanel("Average Day - Quantiles", 
                      plotOutput("plot_avgday"),
                      
                      checkboxGroupButtons(
                         "daycheck", "", justified = TRUE,
                         choices  = day_labels,
                         selected = day_labels
+                     )),
+            tabPanel("Average Day - Trend", 
+                     plotOutput("plot_gctrend"),
+                     
+                     checkboxGroupButtons(
+                         "daycheck", "", justified = TRUE,
+                         choices  = day_labels,
+                         selected = day_labels
                      ))
          )
       )
@@ -102,12 +131,12 @@ server <- function(input, output) {
    #    dtf <- dt %>% 
    #       group_by(date, hour(datetime)) %>% 
    #       filter(datetime > deadline,
-   #              between(sensor_glucose, 
-   #                      quantile(sensor_glucose, perc, na.rm = T),
-   #                      quantile(sensor_glucose, 1-perc, na.rm = T))) %>% 
+   #              between(bg_sensor, 
+   #                      quantile(bg_sensor, perc, na.rm = T),
+   #                      quantile(bg_sensor, 1-perc, na.rm = T))) %>% 
    #       ungroup()
    #    
-   #    ggplot(dtf, aes(datetime, sensor_glucose)) +
+   #    ggplot(dtf, aes(datetime, bg_sensor)) +
    #       geom_line(size = .2) +
    #       # geom_point(size = .1, alpha = .5) +
    #       geom_smooth() +
@@ -123,26 +152,26 @@ server <- function(input, output) {
       date_to   <- input$date_range[2]
       
       dtf <- dt %>% 
-         filter(between(date, date_from, date_to)) %>% 
+         filter(between(date, date_from, date_to), !is.na(bg_sensor)) %>% 
          group_by(date) %>% 
          summarise(
-            min = min(sensor_glucose),
-            q10 = quantile(sensor_glucose, .10),
-            q25 = quantile(sensor_glucose, .25),
-            mid = median(sensor_glucose),
-            mean = mean(sensor_glucose),
-            q75 = quantile(sensor_glucose, .75),
-            q90 = quantile(sensor_glucose, .90),
-            max = max(sensor_glucose)
+            min = min(bg_sensor),
+            q10 = quantile(bg_sensor, .10),
+            q25 = quantile(bg_sensor, .25),
+            mid = median(bg_sensor),
+            mean = mean(bg_sensor),
+            q75 = quantile(bg_sensor, .75),
+            q90 = quantile(bg_sensor, .90),
+            max = max(bg_sensor)
          ) %>% 
          ungroup()
       
-      print(paste("Class of dft$date:", class(dtf$date)))
-      print(paste("Class of as.Date:", 
-                  class(
-                     as.Date("2012-02-02")
-                  )
-      ))
+      # print(paste("Class of dft$date:", class(dtf$date)))
+      # print(paste("Class of as.Date:", 
+      #             class(
+      #                as.Date("2012-02-02")
+      #             )
+      # ))
       
       mean_size <- ifelse(length(dtf$date) <= 21, 5, 3)
       
@@ -188,17 +217,18 @@ server <- function(input, output) {
       
       dtf <- dt %>% 
          filter(between(date, date_from, date_to),
-                weekday %in% daycheck) %>% 
+                wday %in% daycheck,
+                !is.na(bg_sensor)) %>% 
          group_by(hour(time)) %>% 
          summarise(
-            min = min(sensor_glucose),
-            q10 = quantile(sensor_glucose, .10),
-            q25 = quantile(sensor_glucose, .25),
-            mid = median(sensor_glucose),
-            mean = mean(sensor_glucose),
-            q75 = quantile(sensor_glucose, .75),
-            q90 = quantile(sensor_glucose, .90),
-            max = max(sensor_glucose)
+            min = min(bg_sensor),
+            q10 = quantile(bg_sensor, .10),
+            q25 = quantile(bg_sensor, .25),
+            mid = median(bg_sensor),
+            mean = mean(bg_sensor),
+            q75 = quantile(bg_sensor, .75),
+            q90 = quantile(bg_sensor, .90),
+            max = max(bg_sensor)
          ) %>% 
          ungroup() %>% 
          dplyr::rename("Hour" = `hour(time)`)
@@ -232,6 +262,8 @@ server <- function(input, output) {
       }
       p
    })
+   
+   output$plot_gctrend
 }
 
 # Run the application ----

@@ -1,5 +1,11 @@
 library(tidyverse)
-library(lubridate)
+library(ragg)
+# library(dplyr)
+# library(ggplot2)
+# library(purrr)
+# library(stringr)
+# library(lubridate)
+# library(readr)
 library(tsibble)
 library(feasts)
 
@@ -19,4 +25,3 @@ update_geom_defaults("bar", list(colour = "white",
 update_geom_defaults("col", list(colour = "#f0f0f0", 
                                  fill   = "#3c4c72"))
 update_geom_defaults("text", list(colour = "#3c4c72"))
-
