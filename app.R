@@ -75,12 +75,12 @@ ui <- fluidPage(
                            start = max(dt$date) - days(14),
                            end = max(dt$date)),
             
-            dateRangeInput("date_range_comp",
-                           "Select time range to compare to",
-                           min = min(dt$date),
-                           max = max(dt$date),
-                           start = max(dt$date) - days(7),
-                           end = max(dt$date)),
+            # dateRangeInput("date_range_comp",
+            #                "Select time range to compare to",
+            #                min = min(dt$date),
+            #                max = max(dt$date),
+            #                start = max(dt$date) - days(7),
+            #                end = max(dt$date)),
             
             # radioGroupButtons("weekends", "Include Weekends?",
             #                   choices = c("All Days", 
@@ -90,14 +90,14 @@ ui <- fluidPage(
             #                   direction = "vertical",
             #                   justified = TRUE),
             
-            conditionalPanel(
-                condition = 'panelid.tabname == "tab1"',
+            # conditionalPanel(
+            #     condition = 'panelid.tabname == "tab1"',
                 prettyCheckboxGroup("quantis", label = "Show middle range of data", 
                                     choices = list("50%" = 50, "80%" = 80, "100%" = 100),
                                     selected = 50, animation = "smooth"),
                 
                 prettyCheckbox("mean", "Show mean", animation = "smooth")
-            )
+            # )
         ),
         
         # Show a plot of the generated distribution
@@ -253,8 +253,8 @@ server <- function(input, output) {
         p <- p + scale_y_continuous(limits = c(0, 350),
                                     breaks = c(50, 80, 130, 200, 250, 300, 350),
                                     minor_breaks = NULL)
-        p <- p + scale_x_continuous(breaks = seq(0, 23, by = 3),
-                                    minor_breaks = 0:23)
+        p <- p + scale_x_time(breaks = seq(0, 24, 3),
+                              labels = paste0(seq(0, 24, 3), ":00"))
         # p <- p + geom_hline(yintercept = c(90, 150), 
         #                     lty = "dashed", color = "dark green")
         p <- p + labs(x = "Hour", y = "Glucose Level (mg/dl)")

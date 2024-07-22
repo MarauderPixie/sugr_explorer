@@ -5,6 +5,5 @@ account: marauderpixie
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 1375554
-bundleId: 2532580
+bundleId: 8891739
 url: https://marauderpixie.shinyapps.io/sugr_explorer/
-when: 1571923689.27838
