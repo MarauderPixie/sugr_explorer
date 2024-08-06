@@ -48,12 +48,13 @@ sugr_app <- function() {
         # Sidebar with a slider input for number of bins 
         sidebarLayout(
             sidebarPanel(
-                dateRangeInput("date_range",
-                               "Select time range to display",
-                               min = min(dt$date),
-                               max = max(dt$date),
-                               start = max(dt$date) - days(14),
-                               end = max(dt$date)),
+                # dateRangeInput("date_range",
+                #                "Select time range to display",
+                #                min = min(dt$date),
+                #                max = max(dt$date),
+                #                start = max(dt$date) - days(14),
+                #                end = max(dt$date)),
+                daterange_ui("dr1"),
                 
                 # dateRangeInput("date_range_comp",
                 #                "Select time range to compare to",

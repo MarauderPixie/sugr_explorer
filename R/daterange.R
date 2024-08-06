@@ -9,5 +9,6 @@ daterange_ui <- function(id) {
 
 daterange_server <- function(id) {
     moduleServer(id, function(input, output, session) {
+        
     })
 }
